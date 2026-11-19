@@ -114,6 +114,12 @@ body.rehearse #memoBar,body.spectate #memoBar{font-size:18px}
 .wtop{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid #ddd}
 .wtop input{border:1px solid #ccc;border-radius:8px;padding:7px 10px;width:110px;font:inherit}
 .wtop .sp{flex:1}
+.ggrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.ggrid button{font-size:20px;font-weight:800;padding:18px 0;border-radius:14px;border:2px solid #ffcfc2;background:#fff8f5}
+.ggrid button.has{border-color:#ff6b4a}
+.ggrid button small{display:block;font-size:11px;font-weight:400;color:#888;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+#groupBtn{font-weight:800;background:#fff4f0;border-color:#ff6b4a}
+#groupBtn.bad{background:#fdecea;border-color:#c0392b;color:#c0392b}
 #wCode{font-size:20px;font-weight:800;background:#fff4f0;border:2px solid #ff6b4a;border-radius:10px;padding:3px 12px;display:none}
 #wGrid{flex:1;overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;align-content:start}
 .wcard{background:#fff;border:2px solid #ddd;border-radius:14px;padding:8px 10px;cursor:pointer}
@@ -157,14 +163,11 @@ body.spectate header,body.spectate #panel,body.spectate #sceneBar,body.spectate 
     <input id="team" type="text" placeholder="모둠 이름 / 모둠원" maxlength="60">
   </div>
   <div class="hbtns">
-    <button id="connBtn">📡 선생님께 공유</button>
+    <button id="groupBtn">👥 모둠 선택</button>
     <button id="undoBtn">↶ 되돌리기</button>
     <button id="rehearseBtn">🎬 리허설</button>
     <button id="pngBtn">🖼 그림 저장</button>
-    <button id="saveBtn">💾 파일 저장</button>
-    <button id="loadBtn">📂 불러오기</button>
-    <button id="newBtn">새로 만들기</button>
-    <input type="file" id="loadFile" accept=".json,application/json" hidden>
+    <button id="saveBtn" class="pri">💾 저장하기</button>
   </div>
 </header>
 
@@ -282,6 +285,14 @@ body.spectate header,body.spectate #panel,body.spectate #sceneBar,body.spectate 
       <div class="row">빠르기(BPM) <input type="number" id="bpm" min="40" max="240" step="1" style="width:76px"> <button id="tapBtn">박자 탭</button></div>
       <p class="note">8카운트로 쓰려면 BPM이 필요해요. 음악에 맞춰 ‘박자 탭’을 8번 이상 누르면 BPM을 계산해 줘요.</p>
       <p id="tapInfo" class="note"></p>
+      <h4>파일로 따로 보관하기</h4>
+      <div class="grid2">
+        <button id="fileSaveBtn">📁 파일로 내보내기</button>
+        <button id="loadBtn">📂 파일 불러오기</button>
+      </div>
+      <button id="newBtn" style="width:100%;margin-top:6px">🧹 처음부터 다시 만들기</button>
+      <input type="file" id="loadFile" accept=".json,application/json" hidden>
+      <p class="note">작업은 ‘저장하기’를 누르면 서버에 모둠별로 저장되고, 움직일 때마다 자동으로도 저장돼요. 파일 내보내기는 따로 보관하고 싶을 때만 써요.</p>
     </div>
 
     <div class="tab" id="tab-qr">
@@ -296,7 +307,7 @@ body.spectate header,body.spectate #panel,body.spectate #sceneBar,body.spectate 
       <p id="qrWarn" class="note warn"></p>
       <h4>평가하는 선생님용</h4>
       <button id="openWatch" style="width:100%">👀 선생님 관전 모드 열기</button>
-      <p class="note">학생들이 ‘📡 선생님께 공유’로 연결한 모둠의 동선을 실시간으로 볼 수 있어요. 주소 끝에 #teacher 를 붙여 즐겨찾기 하면 바로 열려요.</p>
+      <p class="note">모든 모둠의 동선을 실시간으로 볼 수 있어요. 주소 끝에 #teacher 를 붙여 즐겨찾기 하면 모둠 선택 없이 바로 열려요.</p>
     </div>
   </aside>
 </main>
@@ -322,24 +333,20 @@ body.spectate header,body.spectate #panel,body.spectate #sceneBar,body.spectate 
     <button id="qrClose">닫기</button>
   </div>
 </div>
-<div id="connModal" class="modal" hidden><div class="box">
-  <h3>📡 선생님께 공유하기</h3>
-  <div class="row">반 코드 <input id="cRoom" type="text" placeholder="예: 6-3" style="width:110px" maxlength="20"></div>
-  <div class="row">모둠 <select id="cGroup"></select></div>
-  <p class="note">선생님이 만들어 알려 준 반 코드를 그대로 써요. 연결하면 동선이 바뀔 때마다 선생님 화면에 바로 보여요.<br><b>모둠마다 디벗 한 대만</b> 연결해 주세요.</p>
-  <p id="cMsg" class="note"></p>
-  <div class="row"><button id="cGo" class="pri">연결하기</button><button id="cOff">연결 끊기</button><span style="flex:1"></span><button id="cCancel">닫기</button></div>
-</div></div>
+<div id="startScreen" class="modal">
+  <div class="box" style="width:min(560px,94vw);text-align:center">
+    <h2 style="margin:4px 0 4px">💃 우리 모둠 동선 짜기</h2>
+    <p style="margin:0 0 14px;color:#666">우리 모둠을 골라요</p>
+    <div id="groupGrid" class="ggrid"></div>
+    <p id="startMsg" class="note" style="min-height:20px"></p>
+  </div>
+</div>
 <div id="watch" hidden>
   <div class="wtop">
     <b>👀 선생님 관전</b>
-    반 코드 <input id="wRoom" type="text" placeholder="예: 6-3" maxlength="20">
-    <button id="wGo" class="pri">만들기 / 보기</button>
-    <button id="wRand">🎲 새 코드</button>
-    <span id="wCode"></span>
     <span id="wStatus" class="note"></span>
     <span class="sp"></span>
-    <button id="wClear">이 반 기록 지우기</button>
+    <button id="wClear">모든 모둠 기록 지우기</button>
     <button id="wClose">닫기</button>
   </div>
   <div id="wGrid"></div>
@@ -2652,7 +2659,7 @@ var qrcode = function() {
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
 const COLORS=['#e74c3c','#3498db','#27ae60','#f39c12','#8e44ad','#16a085','#e84393','#2c3e50','#d35400','#7f8c8d','#c0392b','#2980b9'];
-const KEY='dongseon-v1';
+let KEY='dongseon-v1';
 const uid=()=>Math.random().toString(36).slice(2,9);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3161,7 +3168,7 @@ function download(blob,name){
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
 }
 const fileBase=()=>((S.title||'동선')+(S.team?'_'+S.team:'')).replace(/[\\/:*?"<>|]/g,'').slice(0,40)||'동선';
-$('#saveBtn').onclick=()=>{download(new Blob([JSON.stringify({app:'dongseon',v:1,state:S},null,1)],{type:'application/json'}),fileBase()+'.json');toast('파일로 저장했어요');};
+$('#fileSaveBtn').onclick=()=>{download(new Blob([JSON.stringify({app:'dongseon',v:1,state:S},null,1)],{type:'application/json'}),fileBase()+'.json');toast('파일로 저장했어요');};
 $('#loadBtn').onclick=()=>$('#loadFile').click();
 $('#loadFile').onchange=e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
@@ -3171,7 +3178,7 @@ $('#loadFile').onchange=e=>{
     e.target.value='';};
   r.readAsText(f);
 };
-$('#newBtn').onclick=()=>{if(!confirm('지금 작업을 지우고 새로 만들까요? (먼저 파일 저장을 해 두세요)'))return;if(playing)pause();S=defaultState();cur=0;sel=null;viewTime=null;followId='';hist=[];commit();syncInputs();};
+$('#newBtn').onclick=()=>{if(!confirm('우리 모둠 동선을 모두 지우고 처음부터 다시 만들까요?'))return;if(playing)pause();S=defaultState();if(conn)S.team=conn.gn+'모둠';cur=0;sel=null;viewTime=null;followId='';hist=[];commit();syncInputs();};
 $('#undoBtn').onclick=undo;
 
 /* ---------- 그림 저장 ---------- */
@@ -3304,62 +3311,61 @@ $('#quickMemo').addEventListener('click',e=>{
 });
 $('#showMemo').onchange=()=>renderStage();
 
-/* ---------- 선생님께 공유 (Firebase Realtime Database) ---------- */
+/* ---------- 모둠 선택 + 서버 저장 (Firebase Realtime Database) ---------- */
 const DB='https://ninja-game-56862-default-rtdb.firebaseio.com/dongseon';
-const CONN_KEY='dongseon-conn',ROOM_KEY='dongseon-room';
-const keyOf=v=>String(v||'').trim().replace(/[.#$\[\]\/\s]/g,'_').slice(0,20);
+const ROOM='main',NG=10;
 async function fb(method,path,data){
   const r=await fetch(`${DB}/${path}.json`,{method,headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
   if(!r.ok)throw new Error('HTTP '+r.status);return r.json();
 }
 let conn=null,pushT=0;
-try{conn=JSON.parse(localStorage.getItem(CONN_KEY)||'null');}catch(e){}
-function connLabel(){return conn?`${conn.roomName} ${conn.gn}모둠`:'';}
-function setConnUI(state){
-  const b=$('#connBtn');b.classList.remove('on','bad');
-  if(!conn){b.textContent='📡 선생님께 공유';return;}
-  if(state==='bad'){b.classList.add('bad');b.textContent=`📡 ${connLabel()} ⚠ 연결 안 됨`;}
-  else{b.classList.add('on');b.textContent=`📡 ${connLabel()} ●`;}
+function setGroupUI(state){
+  const b=$('#groupBtn');b.classList.toggle('bad',state==='bad');
+  b.textContent=conn?(state==='bad'?`👥 ${conn.gn}모둠 ⚠ 서버 연결 안 됨`:`👥 ${conn.gn}모둠`):'👥 모둠 선택';
 }
-function schedulePush(){if(!conn||spectating)return;clearTimeout(pushT);pushT=setTimeout(doPush,700);}
+function schedulePush(){if(!conn||spectating)return;clearTimeout(pushT);pushT=setTimeout(doPush,800);}
 async function doPush(){
-  if(!conn||spectating)return;
-  try{await fb('PUT',`rooms/${conn.room}/g${conn.gn}`,{state:S,cur,gn:conn.gn,t:{'.sv':'timestamp'}});setConnUI('ok');}
-  catch(e){setConnUI('bad');}
+  if(!conn||spectating)return false;
+  clearTimeout(pushT);
+  try{await fb('PUT',`rooms/${ROOM}/g${conn.gn}`,{state:S,cur,gn:conn.gn,t:{'.sv':'timestamp'}});setGroupUI('ok');return true;}
+  catch(e){setGroupUI('bad');return false;}
 }
-$('#cGroup').innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}모둠</option>`).join('');
-$('#connBtn').onclick=()=>{
-  $('#cRoom').value=conn?conn.roomName:(localStorage.getItem(ROOM_KEY)||'');
-  if(conn)$('#cGroup').value=conn.gn;
-  $('#cMsg').textContent=conn?`지금 ${connLabel()}(으)로 공유 중이에요.`:'';
-  $('#cOff').style.display=conn?'':'none';
-  $('#connModal').hidden=false;
+$('#saveBtn').onclick=async()=>{
+  try{localStorage.setItem(KEY,snapshot());}catch(e){}
+  if(!conn){toast('이 디벗에 저장했어요');return;}
+  const ok=await doPush();
+  toast(ok?`✔ ${conn.gn}모둠으로 저장했어요`:'서버에 저장하지 못했어요. 이 디벗에는 저장됐어요');
 };
-$('#cCancel').onclick=()=>{$('#connModal').hidden=true;};
-$('#cOff').onclick=()=>{conn=null;try{localStorage.removeItem(CONN_KEY);}catch(e){}setConnUI();$('#connModal').hidden=true;toast('공유를 껐어요');};
-$('#cGo').onclick=async()=>{
-  const roomName=$('#cRoom').value.trim(),room=keyOf(roomName),gn=+$('#cGroup').value;
-  if(!room){$('#cMsg').innerHTML='<span class="warn">반 코드를 써 주세요.</span>';return;}
-  $('#cMsg').textContent='연결하는 중…';
-  let ex=null;
-  try{const ok=await fb('GET',`codes/${room}`);
-    if(!ok){$('#cMsg').innerHTML='<span class="warn">선생님이 만든 반 코드가 아니에요. 칠판의 코드를 다시 확인해 주세요.</span>';return;}
-    ex=await fb('GET',`rooms/${room}/g${gn}`);}
-  catch(e){$('#cMsg').innerHTML='<span class="warn">선생님 서버에 연결하지 못했어요. 인터넷 연결을 확인하거나 선생님께 알려 주세요.</span>';return;}
-  if(ex&&ex.state&&ex.state.scenes){
-    const nm=ex.state.title||'제목 없음',ns=(ex.state.scenes||[]).length;
-    if(confirm(`${roomName} ${gn}모둠으로 이미 저장된 동선이 있어요.\n「${nm}」 장면 ${ns}개\n\n[확인] 저장된 동선 불러오기\n[취소] 지금 화면의 동선으로 바꾸기`)){
-      try{S=fixState(ex.state);cur=0;sel=null;viewTime=null;hist=[];syncInputs();}catch(e){}
-    }
-  }
-  conn={room,roomName,gn};
-  try{localStorage.setItem(CONN_KEY,JSON.stringify(conn));localStorage.setItem(ROOM_KEY,roomName);}catch(e){}
-  $('#connModal').hidden=true;commit();await doPush();
-  toast(`${connLabel()}(으)로 공유를 시작했어요`);
-};
+async function showStart(){
+  if(playing)pause();
+  $('#startScreen').hidden=false;
+  const g=$('#groupGrid');
+  g.innerHTML=Array.from({length:NG},(_,i)=>`<button data-g="${i+1}">${i+1}모둠<small>&nbsp;</small></button>`).join('');
+  $('#startMsg').textContent='';
+  try{const all=await fb('GET',`rooms/${ROOM}`)||{};
+    for(const k in all){const v=all[k];if(!v||!v.gn)continue;const b=g.querySelector(`[data-g="${v.gn}"]`);
+      if(b){b.classList.add('has');b.querySelector('small').textContent=(v.state&&v.state.title)||'작업 있음';}}
+  }catch(e){$('#startMsg').innerHTML='<span class="warn">서버에 연결하지 못했어요. 지금은 이 디벗에만 저장돼요.</span>';}
+}
+$('#groupGrid').addEventListener('click',e=>{const b=e.target.closest('button');if(b)selectGroup(+b.dataset.g);});
+$('#groupBtn').onclick=async()=>{if(conn){try{localStorage.setItem(KEY,snapshot());}catch(e){}await doPush();}showStart();};
+async function selectGroup(n){
+  $('#startMsg').textContent=`${n}모둠 불러오는 중…`;
+  KEY='dongseon-v1-g'+n;
+  let st=null,serverOk=true;
+  try{const v=await fb('GET',`rooms/${ROOM}/g${n}`);if(v&&v.state)st=fixState(v.state);}catch(e){serverOk=false;}
+  if(!st){try{const l=localStorage.getItem(KEY);if(l)st=fixState(JSON.parse(l));}catch(e){}}
+  if(!st){st=defaultState();st.team=n+'모둠';}
+  S=st;conn={gn:n};cur=0;sel=null;viewTime=null;followId='';hist=[];
+  $('#startScreen').hidden=true;
+  syncInputs();
+  if(serverOk){setGroupUI('ok');commit();}else{try{localStorage.setItem(KEY,snapshot());}catch(e){}hist=[snapshot()];renderAll();setGroupUI('bad');}
+  if(S.music.type==='yt'&&S.music.yt)loadYT();
+  toast(serverOk?`${n}모둠으로 들어왔어요`:'서버에 연결하지 못해서 이 디벗에 저장된 것으로 시작해요');
+}
 
 /* ---------- 선생님 관전 ---------- */
-let wES=null,wData={},wRoom='';
+let wES=null,wData={},wRoom=ROOM;
 function applyPath(root,path,data,merge){
   const segs=path.split('/').filter(Boolean);
   if(!segs.length)return merge?Object.assign({},root||{},data||{}):(data||{});
@@ -3373,50 +3379,41 @@ function applyPath(root,path,data,merge){
 }
 function openWatch(){
   if(playing)pause();
+  $('#startScreen').hidden=true;
   $('#watch').hidden=false;
-  const r=localStorage.getItem(ROOM_KEY+'-t')||'';
-  if(!$('#wRoom').value)$('#wRoom').value=r;
-  if($('#wRoom').value&&!wES)startWatch();else renderWatch();
+  if(!wES)startWatch();else renderWatch();
 }
 function startWatch(){
-  const name=$('#wRoom').value.trim(),room=keyOf(name);
-  if(!room){$('#wStatus').innerHTML='<span class="warn">반 코드를 써 주세요</span>';return;}
-  try{localStorage.setItem(ROOM_KEY+'-t',name);}catch(e){}
-  fb('PUT',`codes/${room}`,{name,t:{'.sv':'timestamp'}}).catch(()=>{$('#wStatus').innerHTML='<span class="warn">코드를 만들지 못했어요. 인터넷 연결을 확인해 주세요.</span>';});
-  $('#wCode').style.display='inline-block';$('#wCode').textContent='학생 입력 코드: '+name;
   if(wES)wES.close();
-  wRoom=room;wData={};renderWatch();
+  wData={};renderWatch();
   $('#wStatus').textContent='연결하는 중…';
-  wES=new EventSource(`${DB}/rooms/${room}.json`);
+  wES=new EventSource(`${DB}/rooms/${ROOM}.json`);
   wES.onopen=()=>{$('#wStatus').innerHTML='<span class="live">● 실시간 연결됨</span>';$('#specLive').className='live';};
-  wES.onerror=()=>{$('#wStatus').innerHTML='<span class="warn">연결이 끊겨 다시 연결하는 중… (계속되면 인터넷이나 Firebase 규칙을 확인)</span>';$('#specLive').className='warn';};
+  wES.onerror=()=>{$('#wStatus').innerHTML='<span class="warn">연결이 끊겨 다시 연결하는 중…</span>';$('#specLive').className='warn';};
   const on=merge=>e=>{try{$('#wStatus').innerHTML='<span class="live">● 실시간 연결됨</span>';$('#specLive').className='live';const m=JSON.parse(e.data);wData=applyPath(wData,m.path,m.data,merge);renderWatch();if(spectating)applySpectate();}catch(err){}};
   wES.addEventListener('put',on(false));
   wES.addEventListener('patch',on(true));
 }
-function ago(t){if(!t)return'';const s=Math.max(0,Math.round((Date.now()-t)/1000));return s<5?'방금':s<60?s+'초 전':s<3600?Math.floor(s/60)+'분 전':Math.floor(s/3600)+'시간 전';}
+function ago(t){if(!t)return'';const s=Math.max(0,Math.round((Date.now()-t)/1000));return s<5?'방금':s<60?s+'초 전':s<3600?Math.floor(s/60)+'분 전':s<86400?Math.floor(s/3600)+'시간 전':Math.floor(s/86400)+'일 전';}
 function groupList(){return Object.entries(wData||{}).filter(([k,v])=>v&&v.state&&v.state.scenes).sort((a,b)=>(a[1].gn||0)-(b[1].gn||0));}
 function renderWatch(){
   if($('#watch').hidden)return;
   const L=groupList(),g=$('#wGrid');
-  if(!wRoom){g.innerHTML='<div class="wempty">반 코드를 정해서 쓰고 ‘만들기 / 보기’를 누르세요. (예: 6-3) 다른 반과 겹치지 않게 ‘🎲 새 코드’로 숫자 코드를 만들어도 돼요.<br>만든 코드를 칠판에 띄우면 학생들이 ‘📡 선생님께 공유’에 입력해요.</div>';return;}
-  if(!L.length){g.innerHTML=`<div class="wempty">아직 연결한 모둠이 없어요.<br>학생들이 ‘📡 선생님께 공유’에서 반 코드 <b>${esc($('#wRoom').value)}</b>로 연결하면 여기에 나타나요.</div>`;return;}
+  if(!L.length){g.innerHTML='<div class="wempty">아직 들어온 모둠이 없어요.<br>학생들이 처음 화면에서 모둠을 고르면 여기에 바로 나타나요.</div>';return;}
   g.innerHTML=L.map(([k,v])=>{let st;try{st=fixState(JSON.parse(JSON.stringify(v.state)));}catch(e){return'';}
     const c=clamp(v.cur||0,0,st.scenes.length-1);
-    return `<div class="wcard" data-g="${k}"><div class="wh"><b>${v.gn||'?'}모둠</b>${esc(st.title||'제목 없음')} <span class="note">${esc(st.team||'')}</span></div>${miniOf(st,c)}<div class="wf">장면 ${c+1}/${st.scenes.length} 보는 중 · 무대원 ${st.dancers.length}명 · ${fmt(totalOf(st))} · ${ago(v.t)} 수정</div></div>`;}).join('');
+    return `<div class="wcard" data-g="${k}"><div class="wh"><b>${v.gn||'?'}모둠</b>${esc(st.title||'제목 없음')} <span class="note">${esc(st.team&&st.team!==(v.gn+'모둠')?st.team:'')}</span></div>${miniOf(st,c)}<div class="wf">장면 ${c+1}/${st.scenes.length} 보는 중 · ${fmt(totalOf(st))} · ${ago(v.t)} 저장</div></div>`;}).join('');
 }
 function totalOf(st){return st.scenes.reduce((a,sc,i)=>a+(+sc.hold||0)+(i>0?(+sc.trans||0):0),0);}
 $('#wGrid').addEventListener('click',e=>{const c=e.target.closest('.wcard');if(c)enterSpectate(c.dataset.g);});
-$('#wGo').onclick=startWatch;
-$('#wRand').onclick=()=>{$('#wRoom').value=String(1000+Math.floor(Math.random()*9000));startWatch();};
-$('#wRoom').addEventListener('keydown',e=>{if(e.key==='Enter')startWatch();});
-$('#wClose').onclick=()=>{$('#watch').hidden=true;if(wES){wES.close();wES=null;}};
+$('#wClose').onclick=()=>{$('#watch').hidden=true;if(wES){wES.close();wES=null;}if(!conn)showStart();};
 $('#wClear').onclick=async()=>{
-  if(!wRoom)return;
-  if(!confirm(`반 코드 '${$('#wRoom').value}'의 모든 모둠 기록을 서버에서 지울까요?\n(코드도 함께 지워져요. 학생 디벗에 저장된 작업은 남아 있어요)`))return;
-  try{await fb('DELETE',`rooms/${wRoom}`);await fb('DELETE',`codes/${wRoom}`);$('#wCode').style.display='none';toast('지웠어요');}catch(e){toast('지우지 못했어요');}
+  if(!confirm('모든 모둠의 동선 기록을 서버에서 지울까요?\n학생들이 모둠을 다시 고르면 처음부터 시작해요.'))return;
+  if(!confirm('정말 지울까요? 되돌릴 수 없어요.'))return;
+  try{await fb('DELETE',`rooms/${ROOM}`);toast('지웠어요');}catch(e){toast('지우지 못했어요');}
 };
 $('#openWatch').onclick=openWatch;
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&conn&&!spectating){try{localStorage.setItem(KEY,snapshot());}catch(e){}doPush();}});
 setInterval(()=>{if(!$('#watch').hidden)renderWatch();},10000);
 
 let lastYt='';
@@ -3486,8 +3483,8 @@ hist=[snapshot()];
 syncInputs();renderAll();
 if(S.music.type==='yt'&&S.music.yt)loadYT();
 window.addEventListener('resize',()=>renderStage());
-setConnUI();if(conn)schedulePush();
-if(location.hash==='#teacher')openWatch();
+setGroupUI();
+if(location.hash==='#teacher')openWatch();else showStart();
 window.addEventListener('hashchange',()=>{if(location.hash==='#teacher')openWatch();});
 </script>
 </body>
