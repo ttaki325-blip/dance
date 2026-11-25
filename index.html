@@ -127,7 +127,9 @@ body.rehearse #memoBar,body.spectate #memoBar{font-size:18px}
 .wcard .wh{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wcard .wh b{color:#ff6b4a;margin-right:4px}
 .wcard svg{width:100%;height:auto;display:block;margin:6px 0}
-.wcard .wf{font-size:12.5px;color:#777}
+.wcard .wf{font-size:12.5px;color:#777;display:flex;align-items:center;gap:6px}
+.wcard .wf span{flex:1}
+.wcard .wreset{padding:3px 8px;font-size:12px;color:#c0392b;border-color:#f1b8b0}
 .wempty{grid-column:1/-1;text-align:center;color:#888;padding:40px 0;line-height:1.7}
 #specBar{display:none;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:#222;color:#fff}
 #specBar button{padding:6px 10px}
@@ -155,6 +157,7 @@ body.spectate header,body.spectate #panel,body.spectate #sceneBar,body.spectate 
   <label><input type="checkbox" id="specFollow" checked> 학생이 보는 장면 따라가기</label>
   <span style="flex:1"></span>
   <button id="specPng">🖼 그림 저장</button>
+  <button id="specReset">🧹 이 모둠 초기화</button>
   <button id="specBack">← 모둠 목록</button>
 </div>
 <header>
@@ -346,7 +349,7 @@ body.spectate header,body.spectate #panel,body.spectate #sceneBar,body.spectate 
     <b>👀 선생님 관전</b>
     <span id="wStatus" class="note"></span>
     <span class="sp"></span>
-    <button id="wClear">모든 모둠 기록 지우기</button>
+    <button id="wClear">🧹 전체 초기화</button>
     <button id="wClose">닫기</button>
   </div>
   <div id="wGrid"></div>
@@ -3352,14 +3355,19 @@ $('#groupBtn').onclick=async()=>{if(conn){try{localStorage.setItem(KEY,snapshot(
 async function selectGroup(n){
   $('#startMsg').textContent=`${n}모둠 불러오는 중…`;
   KEY='dongseon-v1-g'+n;
-  let st=null,serverOk=true;
-  try{const v=await fb('GET',`rooms/${ROOM}/g${n}`);if(v&&v.state)st=fixState(v.state);}catch(e){serverOk=false;}
-  if(!st){try{const l=localStorage.getItem(KEY);if(l)st=fixState(JSON.parse(l));}catch(e){}}
+  let st=null,serverOk=true,rs=null;
+  try{const v=await fb('GET',`rooms/${ROOM}/g${n}`);if(v&&v.state)st=fixState(v.state);rs=rsOf(await fb('GET','resets'),n);}catch(e){serverOk=false;}
+  if(!st){try{const l=localStorage.getItem(KEY),lrs=+(localStorage.getItem(KEY+'-rs')||0);
+    // 선생님이 초기화한 뒤라면 디벗에 남은 예전 저장본은 쓰지 않아요
+    if(l&&(rs==null||lrs>=rs))st=fixState(JSON.parse(l));}catch(e){}}
+  if(rs!=null){rsBase=rs;try{localStorage.setItem(KEY+'-rs',String(rs));}catch(e){}}
+  else rsBase=+(localStorage.getItem(KEY+'-rs')||0);
   if(!st){st=defaultState();st.team=n+'모둠';}
   S=st;conn={gn:n};cur=0;sel=null;viewTime=null;followId='';hist=[];
   $('#startScreen').hidden=true;
   syncInputs();
   if(serverOk){setGroupUI('ok');commit();}else{try{localStorage.setItem(KEY,snapshot());}catch(e){}hist=[snapshot()];renderAll();setGroupUI('bad');}
+  listenResets();
   if(S.music.type==='yt'&&S.music.yt)loadYT();
   toast(serverOk?`${n}모둠으로 들어왔어요`:'서버에 연결하지 못해서 이 디벗에 저장된 것으로 시작해요');
 }
@@ -3402,16 +3410,49 @@ function renderWatch(){
   if(!L.length){g.innerHTML='<div class="wempty">아직 들어온 모둠이 없어요.<br>학생들이 처음 화면에서 모둠을 고르면 여기에 바로 나타나요.</div>';return;}
   g.innerHTML=L.map(([k,v])=>{let st;try{st=fixState(JSON.parse(JSON.stringify(v.state)));}catch(e){return'';}
     const c=clamp(v.cur||0,0,st.scenes.length-1);
-    return `<div class="wcard" data-g="${k}"><div class="wh"><b>${v.gn||'?'}모둠</b>${esc(st.title||'제목 없음')} <span class="note">${esc(st.team&&st.team!==(v.gn+'모둠')?st.team:'')}</span></div>${miniOf(st,c)}<div class="wf">장면 ${c+1}/${st.scenes.length} 보는 중 · ${fmt(totalOf(st))} · ${ago(v.t)} 저장</div></div>`;}).join('');
+    return `<div class="wcard" data-g="${k}"><div class="wh"><b>${v.gn||'?'}모둠</b>${esc(st.title||'제목 없음')} <span class="note">${esc(st.team&&st.team!==(v.gn+'모둠')?st.team:'')}</span></div>${miniOf(st,c)}<div class="wf"><span>장면 ${c+1}/${st.scenes.length} 보는 중 · ${fmt(totalOf(st))} · ${ago(v.t)} 저장</span><button class="wreset" data-reset="${v.gn}">초기화</button></div></div>`;}).join('');
 }
 function totalOf(st){return st.scenes.reduce((a,sc,i)=>a+(+sc.hold||0)+(i>0?(+sc.trans||0):0),0);}
-$('#wGrid').addEventListener('click',e=>{const c=e.target.closest('.wcard');if(c)enterSpectate(c.dataset.g);});
+$('#wGrid').addEventListener('click',e=>{const rb=e.target.closest('[data-reset]');if(rb){resetGroup(+rb.dataset.reset);return;}const c=e.target.closest('.wcard');if(c)enterSpectate(c.dataset.g);});
 $('#wClose').onclick=()=>{$('#watch').hidden=true;if(wES){wES.close();wES=null;}if(!conn)showStart();};
+async function teacherReset(which){
+  // 1) 학생 화면에 초기화 신호 → 2) 서버 기록 삭제 → 3) 늦게 들어온 자동 저장까지 한 번 더 삭제
+  const path=which==='all'?`rooms/${ROOM}`:`rooms/${ROOM}/g${which}`;
+  await fb('PUT',`resets/${which==='all'?'all':'g'+which}`,{'.sv':'timestamp'});
+  await fb('DELETE',path);
+  setTimeout(()=>{fb('DELETE',path).catch(()=>{});},2500);
+}
 $('#wClear').onclick=async()=>{
-  if(!confirm('모든 모둠의 동선 기록을 서버에서 지울까요?\n학생들이 모둠을 다시 고르면 처음부터 시작해요.'))return;
-  if(!confirm('정말 지울까요? 되돌릴 수 없어요.'))return;
-  try{await fb('DELETE',`rooms/${ROOM}`);toast('지웠어요');}catch(e){toast('지우지 못했어요');}
+  if(!confirm('모든 모둠의 동선을 처음 상태로 초기화할까요?\n\n• 서버에 저장된 기록이 지워져요\n• 학생 디벗에 남아 있는 저장본도 다시 불러오지 않아요\n• 지금 접속한 학생 화면은 모둠 선택 화면으로 돌아가요'))return;
+  if(!confirm('정말 전체 초기화할까요? 되돌릴 수 없어요.'))return;
+  try{await teacherReset('all');toast('전체 초기화했어요');}catch(e){toast('초기화하지 못했어요. 인터넷 연결을 확인해 주세요');}
 };
+async function resetGroup(n){
+  if(!n)return;
+  if(!confirm(`${n}모둠 동선을 처음 상태로 초기화할까요?\n되돌릴 수 없어요.`))return;
+  try{await teacherReset(n);toast(`${n}모둠을 초기화했어요`);
+    if(spectating&&spectating.g==='g'+n){exitSpectate();openWatch();}}
+  catch(e){toast('초기화하지 못했어요');}
+}
+$('#specReset').onclick=()=>{if(spectating)resetGroup(+String(spectating.g).replace('g',''));};
+
+/* 학생 쪽: 선생님의 초기화 신호 받기 */
+let rsES=null,rsData={},rsBase=0;
+const rsOf=(d,n)=>Math.max(+(d&&d.all)||0,+(d&&d['g'+n])||0);
+function listenResets(){
+  if(rsES)return;
+  rsES=new EventSource(`${DB}/resets.json`);
+  const on=merge=>e=>{try{const m=JSON.parse(e.data);rsData=applyPath(rsData,m.path,m.data,merge);
+    if(conn&&!spectating&&rsOf(rsData,conn.gn)>rsBase)onTeacherReset();}catch(err){}};
+  rsES.addEventListener('put',on(false));rsES.addEventListener('patch',on(true));
+}
+function onTeacherReset(){
+  const n=conn.gn;clearTimeout(pushT);if(playing)pause();
+  try{localStorage.removeItem(KEY);localStorage.removeItem(KEY+'-rs');}catch(e){}
+  conn=null;S=defaultState();cur=0;sel=null;viewTime=null;hist=[snapshot()];
+  syncInputs();renderAll();setGroupUI();
+  showStart().then(()=>{$('#startMsg').innerHTML=`<b>선생님이 ${n}모둠 동선을 처음 상태로 초기화했어요.</b> 모둠을 다시 골라 주세요.`;});
+}
 $('#openWatch').onclick=openWatch;
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&conn&&!spectating){try{localStorage.setItem(KEY,snapshot());}catch(e){}doPush();}});
 setInterval(()=>{if(!$('#watch').hidden)renderWatch();},10000);
