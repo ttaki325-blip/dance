@@ -128,6 +128,7 @@ body.rehearse #memoBar,body.spectate #memoBar{font-size:18px}
 .cgrid button{font-size:18px;padding:14px 0}
 .cgrid button.mine{border-color:#ff6b4a;background:#ffe9e2}
 .ggrid[hidden]{display:none}
+.ggrid button.testg{border-style:dashed;border-color:#8e44ad;background:#f7f0fb;color:#8e44ad}
 .ggrid button.has{border-color:#ff6b4a}
 .ggrid button small{display:block;font-size:11px;font-weight:400;color:#888;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
 #groupBtn{font-weight:800;background:#fff4f0;border-color:#ff6b4a}
@@ -418,6 +419,7 @@ body.spectate header,body.spectate #panel,body.spectate #sceneBar,body.spectate 
     <select id="wClass" style="font-size:16px;font-weight:700;padding:6px 8px;border-radius:8px;border:2px solid #ff6b4a"></select>
     <span id="wStatus" class="note"></span>
     <span class="sp"></span>
+    <button id="wQr" class="pri">📱 학생용 QR</button>
     <label style="display:flex;gap:4px;align-items:center;font-size:14px"><input type="checkbox" id="wShowPin"> 🔑 비밀번호 보기</label>
     <button id="wBackup">🕘 이전 기록</button>
     <button id="wClear">🧹 이 반 전체 초기화</button>
@@ -3252,7 +3254,7 @@ $('#loadFile').onchange=e=>{
     e.target.value='';};
   r.readAsText(f);
 };
-$('#newBtn').onclick=()=>{if(!confirm('우리 모둠 동선을 모두 지우고 처음부터 다시 만들까요?'))return;if(playing)pause();S=defaultState();if(conn)S.team=`${conn.cls}반 ${conn.gn}모둠`;cur=0;sel=null;viewTime=null;followId='';hist=[];commit();syncInputs();};
+$('#newBtn').onclick=()=>{if(!confirm('우리 모둠 동선을 모두 지우고 처음부터 다시 만들까요?'))return;if(playing)pause();S=defaultState();if(conn)S.team=`${conn.cls}반 ${gname(conn.gn)}`;cur=0;sel=null;viewTime=null;followId='';hist=[];commit();syncInputs();};
 $('#undoBtn').onclick=undo;
 
 /* ---------- 그림 저장 ---------- */
@@ -3391,6 +3393,8 @@ const NG=10,NC=13;
 let CLS=0;try{CLS=+(localStorage.getItem('dongseon-class')||0);}catch(e){}
 let WCLS=0;
 const cp=c=>'c'+c; // 반별 칸 이름
+const TESTG=10; // 10모둠 = 선생님 테스트용
+const gname=n=>(+n===TESTG?'TEST':n+'모둠');
 async function fb(method,path,data){
   const [pp,qq]=path.split('?');const r=await fetch(`${DB}/${pp}.json${qq?'?'+qq:''}`,{method,headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
   if(!r.ok)throw new Error('HTTP '+r.status);return r.json();
@@ -3398,7 +3402,7 @@ async function fb(method,path,data){
 let conn=null,pushT=0,lastBackup=0;
 function setGroupUI(state){
   const b=$('#groupBtn');b.classList.toggle('bad',state==='bad');
-  b.textContent=conn?(state==='bad'?`👥 ${conn.cls}반 ${conn.gn}모둠 ${navigator.onLine===false?'📴 오프라인':'⚠ 서버 연결 안 됨'}`:`👥 ${conn.cls}반 ${conn.gn}모둠`):'👥 모둠 선택';
+  b.textContent=conn?(state==='bad'?`👥 ${conn.cls}반 ${gname(conn.gn)} ${navigator.onLine===false?'📴 오프라인':'⚠ 서버 연결 안 됨'}`:`👥 ${conn.cls}반 ${gname(conn.gn)}`):'👥 모둠 선택';
 }
 function schedulePush(){if(!conn||spectating)return;clearTimeout(pushT);pushT=setTimeout(doPush,800);}
 async function doPush(){
@@ -3413,7 +3417,7 @@ $('#saveBtn').onclick=async()=>{
   try{localStorage.setItem(KEY,snapshot());}catch(e){}
   if(!conn){toast('이 디벗에 저장했어요');return;}
   const ok=await doPush();
-  toast(ok?`✔ ${conn.cls}반 ${conn.gn}모둠으로 저장했어요`:'✔ 디벗에 저장했어요. 인터넷이 연결되면 서버에도 자동으로 저장돼요');
+  toast(ok?`✔ ${conn.cls}반 ${gname(conn.gn)}으로 저장했어요`:'✔ 디벗에 저장했어요. 인터넷이 연결되면 서버에도 자동으로 저장돼요');
 };
 async function showStart(){
   if(playing)pause();
@@ -3429,11 +3433,11 @@ async function showGroups(){
   $('#startStep').innerHTML=`<b style="color:#ff6b4a">${CLS}반</b> · 우리 모둠을 골라요`;
   $('#classGrid').hidden=true;$('#groupGrid').hidden=false;$('#backClass').hidden=false;
   const g=$('#groupGrid'),c=CLS;
-  g.innerHTML=Array.from({length:NG},(_,i)=>`<button data-g="${i+1}">${i+1}모둠<small>&nbsp;</small></button>`).join('');
+  g.innerHTML=Array.from({length:NG},(_,i)=>`<button data-g="${i+1}" class="${i+1===TESTG?'testg':''}">${i+1===TESTG?'🧪 TEST':gname(i+1)}<small>${i+1===TESTG?'선생님 테스트용':'&nbsp;'}</small></button>`).join('');
   try{const all=await fb('GET',`rooms/${cp(c)}`)||{};
     if(c!==CLS)return;
     for(const k in all){const v=all[k];if(!v||!v.gn)continue;const b=g.querySelector(`[data-g="${v.gn}"]`);
-      if(b){b.classList.add('has');b.querySelector('small').textContent=(v.state&&v.state.title)||'작업 있음';}}
+      if(b&&v.gn!==TESTG){b.classList.add('has');b.querySelector('small').textContent=(v.state&&v.state.title)||'작업 있음';}}
   }catch(e){$('#startMsg').innerHTML='<span class="warn">📴 인터넷에 연결되지 않았어요. 지금은 이 디벗에만 저장되고, 연결되면 서버에도 저장돼요.</span>';}
 }
 $('#classGrid').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CLS=+b.dataset.c;try{localStorage.setItem('dongseon-class',String(CLS));}catch(e){}$('#startMsg').textContent='';showGroups();});
@@ -3445,7 +3449,7 @@ function pinRender(){$$('#pinDots i').forEach((d,i)=>d.classList.toggle('on',i<p
 function askPin(mode,n,expect){
   return new Promise(res=>{
     pinResolve=res;pinBuf='';pinMode=mode;pinFirst='';pinExpect=expect||'';
-    $('#pinTitle').textContent=mode==='set'?`🔑 ${CLS}반 ${n}모둠 비밀번호 정하기`:`🔑 ${CLS}반 ${n}모둠 비밀번호`;
+    $('#pinTitle').textContent=mode==='set'?`🔑 ${CLS}반 ${gname(n)} 비밀번호 정하기`:`🔑 ${CLS}반 ${gname(n)} 비밀번호`;
     $('#pinSub').textContent=mode==='set'?'우리 모둠만 아는 숫자 4자리를 정해요. 다른 모둠은 들어올 수 없어요.':'우리 모둠 비밀번호 4자리를 눌러요.';
     $('#pinMsg').textContent='';pinRender();$('#pinModal').hidden=false;
   });
@@ -3468,16 +3472,17 @@ $('#pinPad').addEventListener('click',e=>{
 });
 async function selectGroup(n){
   const c=CLS;if(!(c>=1))return showClasses();
-  $('#startMsg').textContent=`${c}반 ${n}모둠 확인하는 중…`;
+  $('#startMsg').textContent=`${c}반 ${gname(n)} 확인하는 중…`;
   // 모둠 비밀번호 확인
   let pin;
-  try{pin=await fb('GET',`pins/${cp(c)}/g${n}`);}catch(e){pin=undefined;}
+  if(n===TESTG)pin=false; // 테스트 모둠은 비밀번호 없이 들어가요
+  else{try{pin=await fb('GET',`pins/${cp(c)}/g${n}`);}catch(e){pin=undefined;}}
   if(pin===undefined){
     // 오프라인: 이 디벗에서 전에 비밀번호를 맞게 넣은 모둠만 들어갈 수 있어요
     let saved=null;try{saved=localStorage.getItem(`dongseon-pin-c${c}-g${n}`);}catch(e){}
-    if(!saved){$('#startMsg').innerHTML=`<span class="warn">📴 인터넷이 연결되지 않았어요. ${n}모둠에 이 디벗으로 처음 들어가려면 인터넷이 필요해요.</span>`;return;}
+    if(!saved){$('#startMsg').innerHTML=`<span class="warn">📴 인터넷이 연결되지 않았어요. ${gname(n)}에 이 디벗으로 처음 들어가려면 인터넷이 필요해요.</span>`;return;}
   }
-  if(pin!==undefined){
+  if(pin!==undefined&&n!==TESTG){
     const saved=localStorage.getItem(`dongseon-pin-c${c}-g${n}`);
     if(pin&&saved!==String(pin)){
       const v=await askPin('ask',n,String(pin));
@@ -3489,7 +3494,7 @@ async function selectGroup(n){
     }
     try{localStorage.setItem(`dongseon-pin-c${c}-g${n}`,String(pin));}catch(e){}
   }
-  $('#startMsg').textContent=`${c}반 ${n}모둠 불러오는 중…`;
+  $('#startMsg').textContent=`${c}반 ${gname(n)} 불러오는 중…`;
   KEY=`dongseon-v1-c${c}-g${n}`;
   let st=null,serverOk=true,rs=null;
   try{const v=await fb('GET',`rooms/${cp(c)}/g${n}`);if(v&&v.state)st=fixState(v.state);rs=rsOf(await fb('GET',`resets/${cp(c)}`),n);}catch(e){serverOk=false;}
@@ -3498,7 +3503,7 @@ async function selectGroup(n){
     if(l&&(rs==null||lrs>=rs))st=fixState(JSON.parse(l));}catch(e){}}
   if(rs!=null){rsBase=rs;try{localStorage.setItem(KEY+'-rs',String(rs));}catch(e){}}
   else rsBase=+(localStorage.getItem(KEY+'-rs')||0);
-  if(!st){st=defaultState();st.team=`${c}반 ${n}모둠`;}
+  if(!st){st=defaultState();st.team=`${c}반 ${gname(n)}`;}
   S=st;conn={cls:c,gn:n};lastBackup=0;cur=0;sel=null;viewTime=null;followId='';hist=[];
   $('#startScreen').hidden=true;
   syncInputs();
@@ -3506,7 +3511,7 @@ async function selectGroup(n){
   listenResets();
   if(S.music.type==='yt'&&S.music.yt)loadYT();
   if(!localStorage.getItem('dongseon-help-seen'))setTimeout(()=>openHelp(0),400);
-  toast(serverOk?`${c}반 ${n}모둠으로 들어왔어요`:'📴 오프라인이에요. 이 디벗에 저장된 것으로 시작해요');
+  toast(serverOk?`${c}반 ${gname(n)}으로 들어왔어요`:'📴 오프라인이에요. 이 디벗에 저장된 것으로 시작해요');
 }
 
 /* ---------- 선생님 관전 ---------- */
@@ -3573,7 +3578,7 @@ function renderWatch(){
   if(!L.length){g.innerHTML=`<div class="wempty"><b>${WCLS}반</b>에 아직 들어온 모둠이 없어요.<br>학생들이 처음 화면에서 반과 모둠을 고르면 여기에 바로 나타나요.</div>`;return;}
   g.innerHTML=L.map(([k,v])=>{let st;try{st=fixState(JSON.parse(JSON.stringify(v.state)));}catch(e){return'';}
     const c=clamp(v.cur||0,0,st.scenes.length-1);
-    return `<div class="wcard" data-g="${k}"><div class="wh"><b>${v.gn||'?'}모둠</b>${esc(st.title||'제목 없음')} <span class="note">${esc(st.team&&st.team!==(v.gn+'모둠')&&st.team!==(WCLS+'반 '+v.gn+'모둠')?st.team:'')}</span></div>${miniOf(st,c)}<div class="wf">${$('#wShowPin').checked&&wPins['g'+v.gn]?`<span class="wpin" style="flex:none">🔑 ${esc(wPins['g'+v.gn])}</span>`:''}<span>장면 ${c+1}/${st.scenes.length} 보는 중 · ${fmt(totalOf(st))} · ${ago(v.t)} 저장</span><button class="wreset" data-reset="${v.gn}">초기화</button></div></div>`;}).join('');
+    return `<div class="wcard" data-g="${k}"><div class="wh"><b>${gname(v.gn||'?')}</b>${esc(st.title||'제목 없음')} <span class="note">${esc(st.team&&st.team!==gname(v.gn)&&st.team!==(WCLS+'반 '+gname(v.gn))?st.team:'')}</span></div>${miniOf(st,c)}<div class="wf">${$('#wShowPin').checked&&wPins['g'+v.gn]?`<span class="wpin" style="flex:none">🔑 ${esc(wPins['g'+v.gn])}</span>`:''}<span>장면 ${c+1}/${st.scenes.length} 보는 중 · ${fmt(totalOf(st))} · ${ago(v.t)} 저장</span><button class="wreset" data-reset="${v.gn}">초기화</button></div></div>`;}).join('');
 }
 function totalOf(st){return st.scenes.reduce((a,sc,i)=>a+(+sc.hold||0)+(i>0?(+sc.trans||0):0),0);}
 $('#wGrid').addEventListener('click',e=>{const rb=e.target.closest('[data-reset]');if(rb){resetGroup(+rb.dataset.reset);return;}const c=e.target.closest('.wcard');if(c)enterSpectate(c.dataset.g);});
@@ -3593,8 +3598,8 @@ $('#wClear').onclick=async()=>{
 };
 async function resetGroup(n){
   if(!n)return;
-  if(!confirm(`${WCLS}반 ${n}모둠 동선과 비밀번호를 처음 상태로 초기화할까요?\n(🕘 이전 기록에서 되돌릴 수는 있어요)`))return;
-  try{await teacherReset(n);toast(`${WCLS}반 ${n}모둠을 초기화했어요`);
+  if(!confirm(`${WCLS}반 ${gname(n)} 동선과 비밀번호를 처음 상태로 초기화할까요?\n(🕘 이전 기록에서 되돌릴 수는 있어요)`))return;
+  try{await teacherReset(n);toast(`${WCLS}반 ${gname(n)}을 초기화했어요`);
     if(spectating&&spectating.g==='g'+n){exitSpectate();openWatch();}}
   catch(e){toast('초기화하지 못했어요');}
 }
@@ -3619,9 +3624,10 @@ function onTeacherReset(){
   try{localStorage.removeItem(KEY);localStorage.removeItem(KEY+'-rs');}catch(e){}
   conn=null;S=defaultState();cur=0;sel=null;viewTime=null;hist=[snapshot()];
   syncInputs();renderAll();setGroupUI();
-  showStart().then(()=>{$('#startMsg').innerHTML=`<b>선생님이 ${CLS}반 ${n}모둠 동선을 초기화하거나 이전 기록으로 되돌렸어요.</b> 모둠을 다시 골라 주세요.`;});
+  showStart().then(()=>{$('#startMsg').innerHTML=`<b>선생님이 ${CLS}반 ${gname(n)} 동선을 초기화하거나 이전 기록으로 되돌렸어요.</b> 모둠을 다시 골라 주세요.`;});
 }
 $('#openWatch').onclick=()=>openWatch();
+$('#wQr').onclick=()=>{const u=pageUrl();$('#qrLarge').innerHTML=qrSVG(u).svg;$('#qrUrlText').textContent=u;$('#qrTitle').textContent='동선 짜기 접속하기';$('#qrOverlay').hidden=false;};
 $('#wClass').onchange=()=>{WCLS=+$('#wClass').value;if(spectating)exitSpectate();$('#watch').hidden=false;startWatch();};
 
 /* ---------- 사용법 ---------- */
@@ -3660,7 +3666,7 @@ $('#wShowPin').onchange=async()=>{
   renderWatch();
 };
 async function openBackups(n){
-  $('#bkGroup').innerHTML=Array.from({length:NG},(_,i)=>`<option value="${i+1}">${i+1}모둠</option>`).join('');
+  $('#bkGroup').innerHTML=Array.from({length:NG},(_,i)=>`<option value="${i+1}">${gname(i+1)}</option>`).join('');
   $('#bkGroup').value=n||1;$('#bkTitle').textContent=`🕘 ${WCLS}반 이전 기록으로 되돌리기`;$('#bkModal').hidden=false;loadBackups();
 }
 let bkItems=[];
@@ -3679,12 +3685,12 @@ $('#bkClose').onclick=()=>{$('#bkModal').hidden=true;};
 $('#bkList').addEventListener('click',async e=>{
   const b=e.target.closest('button[data-i]');if(!b)return;
   const n=+$('#bkGroup').value,v=bkItems[+b.dataset.i][1];
-  if(!confirm(`${WCLS}반 ${n}모둠 동선을 이 기록으로 되돌릴까요?\n지금 들어와 있는 학생 화면은 모둠 선택으로 돌아가요.`))return;
+  if(!confirm(`${WCLS}반 ${gname(n)} 동선을 이 기록으로 되돌릴까요?\n지금 들어와 있는 학생 화면은 모둠 선택으로 돌아가요.`))return;
   try{
     await fb('PUT',`resets/${cp(WCLS)}/g${n}`,{'.sv':'timestamp'});
     await new Promise(r=>setTimeout(r,1500));
     await fb('PUT',`rooms/${cp(WCLS)}/g${n}`,{state:v.state,cur:0,gn:n,cls:WCLS,t:{'.sv':'timestamp'}});
-    toast(`${n}모둠을 되돌렸어요`);$('#bkModal').hidden=true;
+    toast(`${gname(n)}을 되돌렸어요`);$('#bkModal').hidden=true;
   }catch(err){toast('되돌리지 못했어요');}
 });
 $('#wBackup').onclick=()=>openBackups(1);
@@ -3707,7 +3713,7 @@ function applySpectate(first){
   if(first||($('#specFollow').checked&&!playing)){cur=clamp(v.cur||0,0,S.scenes.length-1);if(!playing)viewTime=null;}
   else cur=clamp(cur,0,S.scenes.length-1);
   if(viewTime!=null)viewTime=Math.min(viewTime,total());
-  $('#specName').textContent=`${WCLS}반 ${v.gn||'?'}모둠 「${S.title||'제목 없음'}」`+(S.team&&S.team!==`${WCLS}반 ${v.gn}모둠`?` (${S.team})`:'');
+  $('#specName').textContent=`${WCLS}반 ${gname(v.gn||'?')} 「${S.title||'제목 없음'}」`+(S.team&&S.team!==`${WCLS}반 ${gname(v.gn)}`?` (${S.team})`:'');
   renderAll();syncMusicUI();
   if(S.music.type==='yt'&&S.music.yt&&(first||S.music.yt!==lastYt)){lastYt=S.music.yt;loadYT();}
 }
