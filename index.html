@@ -3533,19 +3533,38 @@ function openWatch(cls){
   $('#watch').hidden=false;
   if(!wES||wESCls!==WCLS)startWatch();else renderWatch();
 }
+/* 관전 화면은 마지막으로 받은 내용을 이 기기에 보관해 두었다가, 연결이 끊겨도 보여 줘요 */
+const wcKey=c=>'dongseon-wcache-c'+c;
+let wcT=0,wLastAt=0;
+function hm(t){const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+function saveWCache(){clearTimeout(wcT);const c=WCLS,d=wData;wcT=setTimeout(()=>{try{localStorage.setItem(wcKey(c),JSON.stringify({at:Date.now(),data:d}));}catch(e){}},800);}
+function loadWCache(c){try{const v=JSON.parse(localStorage.getItem(wcKey(c))||'null');if(v&&v.data)return v;}catch(e){}return null;}
+function setWStatus(kind){
+  const live=kind==='live';
+  $('#specLive').className=live?'live':'warn';
+  $('#specLive').textContent=live?'● 실시간':`📴 ${wLastAt?hm(wLastAt)+'까지 받은 내용':'연결 끊김'}`;
+  if(live)$('#wStatus').innerHTML='<span class="live">● 실시간 연결됨</span>';
+  else if(kind==='connecting')$('#wStatus').innerHTML=wLastAt?`연결하는 중… <span class="note">(우선 ${hm(wLastAt)}까지 받은 내용을 보여 줘요)</span>`:'연결하는 중…';
+  else $('#wStatus').innerHTML=`<span class="warn">📴 연결이 끊겼어요.</span> `+(wLastAt?`<b>${hm(wLastAt)}</b>까지 받은 내용을 보여 주고 있어요. 다시 연결되면 자동으로 새로 받아요.`:'아직 받은 내용이 없어요.');
+}
 function startWatch(){
   if(wES)wES.close();
   wESCls=WCLS;try{localStorage.setItem('dongseon-wclass',String(WCLS));}catch(e){}
   wPins={};if($('#wShowPin').checked)fb('GET',`pins/${cp(WCLS)}`).then(d=>{wPins=d||{};renderWatch();}).catch(()=>{});
-  wData={};renderWatch();
-  $('#wStatus').textContent='연결하는 중…';
+  const cache=loadWCache(WCLS);
+  wData=cache?cache.data:{};wLastAt=cache?cache.at:0;
+  renderWatch();if(spectating)applySpectate();
+  setWStatus(navigator.onLine===false?'off':'connecting');
   wES=new EventSource(`${DB}/rooms/${cp(WCLS)}.json`);
-  wES.onopen=()=>{$('#wStatus').innerHTML='<span class="live">● 실시간 연결됨</span>';$('#specLive').className='live';};
-  wES.onerror=()=>{$('#wStatus').innerHTML='<span class="warn">연결이 끊겨 다시 연결하는 중…</span>';$('#specLive').className='warn';};
-  const on=merge=>e=>{try{$('#wStatus').innerHTML='<span class="live">● 실시간 연결됨</span>';$('#specLive').className='live';const m=JSON.parse(e.data);wData=applyPath(wData,m.path,m.data,merge);renderWatch();if(spectating)applySpectate();}catch(err){}};
+  wES.onopen=()=>setWStatus('live');
+  wES.onerror=()=>setWStatus('off');
+  const on=merge=>e=>{try{const m=JSON.parse(e.data);wData=applyPath(merge?wData:(m.path==='/'?{}:wData),m.path,m.data,merge);
+    wLastAt=Date.now();setWStatus('live');saveWCache();renderWatch();if(spectating)applySpectate();}catch(err){}};
   wES.addEventListener('put',on(false));
   wES.addEventListener('patch',on(true));
 }
+window.addEventListener('offline',()=>{if(wES)setWStatus('off');});
+window.addEventListener('online',()=>{if(wES&&!$('#watch').hidden||spectating){startWatch();}});
 function ago(t){if(!t)return'';const s=Math.max(0,Math.round((Date.now()-t)/1000));return s<5?'방금':s<60?s+'초 전':s<3600?Math.floor(s/60)+'분 전':s<86400?Math.floor(s/3600)+'시간 전':Math.floor(s/86400)+'일 전';}
 function groupList(){return Object.entries(wData||{}).filter(([k,v])=>v&&v.state&&v.state.scenes).sort((a,b)=>(a[1].gn||0)-(b[1].gn||0));}
 function renderWatch(){
@@ -3688,7 +3707,7 @@ function applySpectate(first){
   if(first||($('#specFollow').checked&&!playing)){cur=clamp(v.cur||0,0,S.scenes.length-1);if(!playing)viewTime=null;}
   else cur=clamp(cur,0,S.scenes.length-1);
   if(viewTime!=null)viewTime=Math.min(viewTime,total());
-  $('#specName').textContent=`${WCLS}반 ${v.gn||'?'}모둠 「${S.title||'제목 없음'}」`+(S.team?` (${S.team})`:'');
+  $('#specName').textContent=`${WCLS}반 ${v.gn||'?'}모둠 「${S.title||'제목 없음'}」`+(S.team&&S.team!==`${WCLS}반 ${v.gn}모둠`?` (${S.team})`:'');
   renderAll();syncMusicUI();
   if(S.music.type==='yt'&&S.music.yt&&(first||S.music.yt!==lastYt)){lastYt=S.music.yt;loadYT();}
 }

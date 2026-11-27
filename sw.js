@@ -1,6 +1,6 @@
 /* 동선 짜기 오프라인 저장용 서비스 워커
    프로그램을 고칠 때마다 아래 VERSION 숫자를 하나 올려 주세요. */
-const VERSION = 'dongseon-v1';
+const VERSION = 'dongseon-v2';
 const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
